@@ -2,7 +2,8 @@
 #eventlet.monkey_patch()
 import os
 import time 
-from openai import OpenAI
+import requests
+# from openai import OpenAI
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
 from flask import Flask, render_template_string
@@ -13,7 +14,7 @@ load_dotenv()
 app = Flask(__name__)
 #socketio = SocketIO(app, cors_allowed_origins="*", path='/ws')
 socketio = SocketIO(app, cors_allowed_origins="*", path='/ws', async_mode='threading')
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 v2_apis(socketio)
 @app.route('/')
@@ -61,13 +62,23 @@ def handle_message(data):
         ]
     """
 
-    completion = client.chat.completions.create(
-        model='gpt-4o-mini',
-        messages=prompt,
-        temperature=0
+    # completion = client.chat.completions.create(
+    #     model='gpt-4o-mini',
+    #     messages=prompt,
+    #     temperature=0
+    # )
+    response = requests.post(
+        "http://localhost:11434/api/chat",
+        json={
+            "model": "llama3",
+            "messages": prompt,
+            "stream": False
+        }
     )
 
-    emit('understandings', {'response': f"{completion.choices[0].message.content}"})
+    emit('understandings', {
+        'response': response.json()["message"]["content"]
+    })
 
     #res="""[{"section":"hero","description":"Full-width banner with a headline (e.g., 'Learn Anything, Anytime'), subheading, call-to-action buttons (e.g., 'Browse Courses', 'Start Free Trial'), and a background image or video."},{"section":"featured-courses","description":"Grid or carousel of top-rated courses with course images, titles, instructors, ratings, and prices. Include a 'View All' button."},{"section":"categories","description":"Section displaying course categories (e.g., 'Programming', 'Design', 'Business') with icons and brief descriptions. Each category links to a dedicated page."},{"section":"testimonials","description":"User testimonials or success stories with profile pictures, names, and quotes. Optionally include a video testimonial."},{"section":"instructors","description":"Showcase featured instructors with photos, names, expertise, and links to their profiles or courses."},{"section":"pricing","description":"Pricing plans (e.g., 'Free', 'Monthly Subscription', 'Annual Subscription') with features, prices, and comparison tables."},{"section":"about","description":"Brief about the platform, mission statement, and key statistics (e.g., '10,000+ Students', '500+ Courses')."},{"section":"cta","description":"Call-to-action section with a prominent message (e.g., 'Ready to Start Learning?') and a button (e.g., 'Join Now')."},{"section":"footer","description":"Footer with links (e.g., 'About Us', 'Contact', 'Privacy Policy'), social media icons, newsletter subscription, and copyright information."}]"""
     #emit('understandings', {'response': res})
@@ -86,7 +97,7 @@ def fix_code(data):
 
     prompt = [
         {
-            'role': 'developer',
+            'role': 'system',
             'content': role_instruction
         },
         {
@@ -95,17 +106,26 @@ def fix_code(data):
         }
     ]
     try:
-        response = client.chat.completions.create(
-            model='gpt-4o-mini',
-            messages=prompt,
-            temperature=0,
-            stream=True
+        # response = client.chat.completions.create(
+        #     model='gpt-4o-mini',
+        #     messages=prompt,
+        #     temperature=0,
+        #     stream=True
+        # )
+        response = requests.post(
+            "http://localhost:11434/api/chat",
+            json={
+                "model": "llama3",
+                "messages": prompt,
+                "stream": False
+            }
         )
-        for chunk in response:
-            content = chunk.choices[0].delta.content
-            if content:
-                print(content)
-                emit('fixed', {'response': content})
+        # for chunk in response:
+        data = response.json()
+        content = data.get("message", {}).get("content", "")
+            # if content:
+            #     print(content)
+        emit('fixed', {'response': content})
         emit('fixing_done', {'response': 'done'})
     except Exception as e:
         emit('error', {'response': str(e)})
