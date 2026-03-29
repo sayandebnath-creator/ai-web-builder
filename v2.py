@@ -2,7 +2,9 @@
 import os
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
-from openai import OpenAI
+# from openai import 
+import requests
+import json
 from dotenv import load_dotenv
 import time
 import asyncio
@@ -13,10 +15,10 @@ load_dotenv()
 
 
 def v2_apis(socketio):
-    client = OpenAI(
-        api_key=os.getenv("ANTHROPIC_API_KEY"),
-        base_url="https://api.anthropic.com/v1/"
-    )
+    # client = OpenAI(
+    #     api_key=os.getenv("ANTHROPIC_API_KEY"),
+    #     base_url="https://api.anthropic.com/v1/"
+    # )
 
     @socketio.on('v2/test')
     def test_v2(data):
@@ -45,28 +47,63 @@ def v2_apis(socketio):
             
         
             
-            prompt = [{'role': 'user', 'content': query}]
+            # prompt = [{'role': 'user', 'content': query}]
+            prompt = [
+                    {"role": "system", "content": "You generate only HTML/CSS code without explanation"},
+                    {"role": "user", "content": query}
+                ]
             try:
 
-                response = client.chat.completions.create(
-                    model="claude-3-7-sonnet-20250219",
-                    max_tokens=8192,
-                    temperature=0,
-                    messages=prompt,
+                # response = client.chat.completions.create(
+                #     model="claude-3-7-sonnet-20250219",
+                #     max_tokens=8192,
+                #     temperature=0,
+                #     messages=prompt,
+                #     stream=True
+                # )
+                # hypertext = ""
+                # for chunk in response:
+                #     if not chunk or not chunk.choices:
+                #         continue
+                #     delta = chunk.choices[0].delta
+                #     content = getattr(delta, "content", None)
+                #     if content:
+                #         content = content.replace('\n', '')
+                #         hypertext+=content
+                #         socketio.emit('v2/code', {'content': content,"section":section['section']})
+                #         time.sleep(0.02)  
+                with requests.post(
+                    "http://localhost:11434/api/chat",
+                    json={
+                        "model": "llama3",
+                        "messages": prompt,
+                        "stream": True
+                    },
                     stream=True
-                )
-                hypertext = ""
-                for chunk in response:
-                    if not chunk or not chunk.choices:
-                        continue
-                    delta = chunk.choices[0].delta
-                    content = getattr(delta, "content", None)
-                    if content:
-                        content = content.replace('\n', '')
-                        hypertext+=content
-                        socketio.emit('v2/code', {'content': content,"section":section['section']})
-                        time.sleep(0.02)  
-                
+                ) as r:
+
+                    hypertext = ""
+
+                    for line in r.iter_lines():
+                        if line:
+                            try:
+                                data = json.loads(line.decode("utf-8"))
+                                content = data.get("message", {}).get("content", "")
+
+                                if content:
+                                    content = content.replace('\n', '')
+                                    hypertext += content
+
+                                    socketio.emit('v2/code', {
+                                        'content': content,
+                                        "section": section['section']
+                                    })
+
+                                    time.sleep(0.02)
+
+                            except:
+                                continue
+
                 if section['section']=='hero':
                     #root_theme=await extract_root_theme(hypertext)
                     if section['section'] == 'hero':
@@ -101,26 +138,55 @@ def v2_apis(socketio):
         if color.lower() != "auto":
             query=query+f", with theme of {color} color"
 
-        prompt = [{'role': 'user', 'content': query}]
+        # prompt = [{'role': 'user', 'content': query}]
+        prompt = [
+                {"role": "system", "content": "You generate only HTML/CSS code without explanation"},
+                {"role": "user", "content": query}
+            ]
         try:
-            response = client.chat.completions.create(
-                model="claude-3-7-sonnet-20250219",
-                max_tokens=8192,
-                temperature=0,
-                messages=prompt,
+            # response = client.chat.completions.create(
+            #     model="claude-3-7-sonnet-20250219",
+            #     max_tokens=8192,
+            #     temperature=0,
+            #     messages=prompt,
+            #     stream=True
+            # )
+            # hypertext = ""
+            # for chunk in response:
+            #     if not chunk or not chunk.choices:
+            #         continue
+            #     delta = chunk.choices[0].delta
+            #     content = getattr(delta, "content", None)
+            #     if content:
+            #         hypertext+=content
+            #         print(content)
+            #         socketio.emit('v2/code', {'content': content})
+            #         time.sleep(0.02)
+            with requests.post(
+                "http://localhost:11434/api/chat",
+                json={
+                    "model": "llama3",
+                    "messages": prompt,
+                    "stream": True
+                },
                 stream=True
-            )
-            hypertext = ""
-            for chunk in response:
-                if not chunk or not chunk.choices:
-                    continue
-                delta = chunk.choices[0].delta
-                content = getattr(delta, "content", None)
-                if content:
-                    hypertext+=content
-                    print(content)
-                    socketio.emit('v2/code', {'content': content})
-                    time.sleep(0.02)  
+            ) as r:
+
+                hypertext = ""
+
+                for line in r.iter_lines():
+                    if line:
+                        try:
+                            data = json.loads(line.decode("utf-8"))
+                            content = data.get("message", {}).get("content", "")
+
+                            if content:
+                                hypertext += content
+                                socketio.emit('v2/code', {'content': content})
+                                time.sleep(0.02)
+
+                        except:
+                            continue  
 
             socketio.emit('v2/complete_code', {'content': hypertext})
 
