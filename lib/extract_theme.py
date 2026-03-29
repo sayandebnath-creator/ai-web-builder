@@ -1,5 +1,7 @@
 import re
-from openai import OpenAI
+# from openai import OpenAI
+import requests
+import json
 
 
 def extract_root_theme(html: str) -> str:
@@ -16,17 +18,32 @@ def extract_root_theme(html: str) -> str:
         "text-shadow":""}```
     """
 
-    client = OpenAI(api_key="sk-b98b8a0162a84093995d2aed67d1186b", base_url="https://api.deepseek.com")
-    response = client.chat.completions.create(
-        model="deepseek-chat",
-        messages=[
-            {"role": "system", "content": "You are a color detector and theme schema maker, who only responds in json"},
-            {"role": "user", "content": f"Analyse the css ```css {css}``` and fill value of ```json {color_format}``` extracting colors from the css, only respond in json following same provided format and keys"},
-        ],
-        stream=False
+    # client = OpenAI(api_key="sk-b98b8a0162a84093995d2aed67d1186b", base_url="https://api.deepseek.com")
+    # response = client.chat.completions.create(
+    #     model="deepseek-chat",
+    #     messages=[
+    #         {"role": "system", "content": "You are a color detector and theme schema maker, who only responds in json"},
+    #         {"role": "user", "content": f"Analyse the css ```css {css}``` and fill value of ```json {color_format}``` extracting colors from the css, only respond in json following same provided format and keys"},
+    #     ],
+    #     stream=False
+    # )
+
+    # config=response.choices[0].message.content
+
+    response = requests.post(
+        "http://localhost:11434/api/chat",
+        json={
+            "model": "llama3",
+            "messages": [
+                {"role": "system", "content": "You are a color detector and theme schema maker, who only responds in json"},
+                {"role": "user", "content": f"Analyse the css ```css {css}``` and fill value of ```json {color_format}``` extracting colors from the css, only respond in json following same provided format and keys"}
+            ],
+            "stream": False
+        }
     )
 
-    config=response.choices[0].message.content
+    data = response.json()
+    config = data.get("message", {}).get("content", "")
     config=config.replace("```json", '')
     config=config.replace("```", '')
     print("Config is:")
