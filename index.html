@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GrapesJS Studio</title>
+    <link
+      rel="stylesheet"
+      href="/static/node_modules/grapesjs/dist/css/grapes.min.css"
+    />
+    <link rel="stylesheet" href="/static/themes/base.css" />
+    <link rel="stylesheet" href="/static/themes/studio.css" />
+  </head>
+  <body>
+    <div id="gjs"></div>
+    <script src="/static/node_modules/grapesjs/dist/grapes.min.js"></script>
+    <script src="https://unpkg.com/@grapesjs/studio-sdk/dist/index.umd.js"></script>
+    <script src="/static/script.js"></script>
+    <script src="/static/scripts/component_config.js"></script>
+    <!--<script src="/static/scripts/component_loader.js"></script>-->
+    <script src="/static/config.js"></script>
+    <script src="/static/scripts/set_image.js"></script>
+    <script src="/static/node_modules/grapesjs-preset-webpage/dist/grapesjs-preset-webpage.min.js"></script>
+    <script src="/static/node_modules/grapesjs-plugin-forms/dist/index.js"></script>
+    <script src="/static/node_modules/grapesjs-tailwind/dist/grapesjs-tailwind.min.js"></script>
+    <script src="/static/scripts/components.js"></script>
+    <script src="/static/scripts/ai_creator.js"></script>
+    <script src="/static/scripts/ai_editor.js"></script>
+    <script src="/static/scripts/custom_components.js"></script>
+    <script src="/static/node_modules/socket.io/client-dist/socket.io.min.js"></script>
+    <script>
+      function arraysEqual(arr1, arr2) {
+        if (arr1.length !== arr2.length) return false;
+        const sorted1 = [...arr1].sort();
+        const sorted2 = [...arr2].sort();
+        return sorted1.every((val, index) => val === sorted2[index]);
+      }
+
+      window.onload = function () {
+        const escapeName = (name) =>
+          `${name}`.trim().replace(/([^a-z0-9\w-:/]+)/gi, "-");
+        
+        var editor = grapesjs.init({
+          container: "#gjs",
+          height: "100%",
+          fromElement: false,
+          noticeOnUnload: false,
+          storageManager: false,
+          selectorManager: { escapeName },
+          plugins: ["grapesjs-tailwind"],
+          canvas: {
+            styles: [
+              'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css'
+            ]
+          }
+        });
+        ai_creator(editor);
+        ai_editor(editor);
+      };
+    </script>
+  </body>
+</html>
